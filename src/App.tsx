@@ -8,7 +8,16 @@ function App() {
   const [count, setCount] = useState(0)
   const mdList = [
     '简单来说，**`React.FC` 是 TypeScript 的类型定义，而 `import React` 的省略是 React 17 引入的新特性**。',
-    '# Hello, world!\n\nThis is a simple paragraph with some **bold** text.'
+    '# Hello, world!\n\nThis is a simple paragraph with some **bold** text.',
+    '这是一个测试链接的字符串，请查看 [通义千问官网](https://www.aliyun.com/product/tongyi)。',
+    `
+| 姓名 | 年龄 | 职业 |
+| :--- | :---: | ---: |
+| 张三 | 25 | 工程师 |
+| 李四 | 30 | 设计师 |
+| 王五 | 28 | 产品经理 |
+`,
+    '下面是具体代码\n```javascript\n console.log(aa);'
   ]
   const [llmRes, setLlmRes] = useState(mdList[0]);
   const [llmReq, setLlmReq] = useState('');
