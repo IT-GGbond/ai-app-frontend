@@ -1,30 +1,13 @@
 import { useState } from 'react'
-import './App.css'
+import styles from './App.module.css'
 import Chat from './components/Chat'
 import ChatRecord from './components/ChatRecord'
 import { llmApi } from './api/llmApi'
+import SideBar from './components/SideBar'
 
 function App() {
-  const [count, setCount] = useState(0)
-  const mdList = [
-    '简单来说，**`React.FC` 是 TypeScript 的类型定义，而 `import React` 的省略是 React 17 引入的新特性**。',
-    '# Hello, world!\n\nThis is a simple paragraph with some **bold** text.',
-    '这是一个测试链接的字符串，请查看 [通义千问官网](https://www.aliyun.com/product/tongyi)。',
-    `
-| 姓名 | 年龄 | 职业 |
-| :--- | :---: | ---: |
-| 张三 | 25 | 工程师 |
-| 李四 | 30 | 设计师 |
-| 王五 | 28 | 产品经理 |
-`,
-    '下面是具体代码\n```javascript\n console.log(aa);'
-  ]
-  const [llmRes, setLlmRes] = useState(mdList[0]);
+  const [llmRes, setLlmRes] = useState('');
   const [llmReq, setLlmReq] = useState('');
-  function next() {
-    setCount(count + 1);
-    setLlmRes(mdList[count % mdList.length])
-  }
   const handler = {
     onSend() {
       const xhr = new XMLHttpRequest();
@@ -44,13 +27,19 @@ function App() {
     }
   }
   return (
-    <>
-      yes{count}
-      <div className="btn" onClick={() => setCount(count + 1)}>点我加一</div>
-      <div className="btn" onClick={next}>下一个</div>
-      <ChatRecord content={llmRes}></ChatRecord>
-      <Chat onSend={handler.onSend} llmReq={llmReq} setLlmReq={setLlmReq}></Chat>
-    </>
+    <div className={styles.wrap}>
+      <div className={styles.sidebar}>
+        <SideBar></SideBar>
+      </div>
+      <div className={styles.rightbar}>
+        <div className={styles.chatDetails}>
+          <ChatRecord content={llmRes}></ChatRecord>
+        </div>
+        <div className={styles.rightBottom}>
+          <Chat onSend={handler.onSend} llmReq={llmReq} setLlmReq={setLlmReq}></Chat>
+        </div>
+      </div>
+    </div>
   )
 }
 

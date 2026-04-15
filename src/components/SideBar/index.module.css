@@ -1,0 +1,20 @@
+.wrap {
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 20px;
+    background-color: aliceblue;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.title {
+    line-height: 1;
+    margin: 0;
+}
+
+.createNew {
+    border: 1px solid #aaa;
+    border-radius: 10px;
+    padding: 5px;
+}

@@ -9,9 +9,11 @@ interface ChatRecordProps {
 function ChatRecord({ content }: ChatRecordProps) {
     return (
         <div className="record-wrap">
-            聊天记录
+            <h3 className="record-title">聊天记录</h3>
             {/* 使用components自定义样式 */}
-            <ReactMarkdown components={{ a: ({...props}) => <a className='new-a' {...props} /> }} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</ReactMarkdown>
+            <div className="record-details">
+                <ReactMarkdown components={{ a: ({ ...props }) => <a className='new-a' {...props} /> }} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</ReactMarkdown>
+            </div>
         </div>
     )
 }

@@ -1,9 +1,15 @@
 .record-wrap {
+    margin: 20px;
     border: 1px solid #ddd;
     border-radius: 10px;
-    height: 500px;
+    min-height: 90%;
     text-align: start;
 }
+
+.record-title {
+    text-align: center;
+}
+
 .new-a {
     text-decoration: none;
     color: #1677ff;
