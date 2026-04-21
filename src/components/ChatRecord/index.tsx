@@ -12,7 +12,7 @@ function ChatRecord({ content }: ChatRecordProps) {
             <h3 className="record-title">聊天记录</h3>
             {/* 使用components自定义样式 */}
             <div className="record-details">
-                <ReactMarkdown components={{ a: ({ ...props }) => <a className='new-a' {...props} /> }} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</ReactMarkdown>
+                <ReactMarkdown components={{ a: ({ ...props }) => <a className='new-a' target="_blank" {...props} /> }} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</ReactMarkdown>
             </div>
         </div>
     )
