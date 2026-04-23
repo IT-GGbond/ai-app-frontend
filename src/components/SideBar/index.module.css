@@ -17,4 +17,31 @@
     border: 1px solid #aaa;
     border-radius: 10px;
     padding: 5px;
+    cursor: pointer;
+}
+
+.chatList {
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.chatItem {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.active {
+    background-color: #e6f7ff;
+    color: #4096ff;
+    font-weight: 500;
+}
+
+.empty {
+    text-align: center;
+    color: #999;
+    padding: 20px 10px;
 }
