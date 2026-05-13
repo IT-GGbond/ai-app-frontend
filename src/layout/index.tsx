@@ -9,6 +9,7 @@ import { llmApi } from '../api/llmApi';
 interface ChatRecord {
     content: string;
     role: 'user' | 'assistant';
+    id?: string | number,
 }
 
 interface SessionItem {
@@ -80,7 +81,8 @@ function Layout() {
         const res = await llmApi.sendToLlmNew({ content: llmReq, userId, sessionId: sessionId as string })
 
         if (res.data.messageList) {
-            setChatRecords(res.data.messageList)
+            // 收到的记录是聊天列表，sse返回的是一条数据：ai的回复
+            setChatRecords(res.data)
         }
         if (!sessionId) {
             // 新对话发送，获取列表
@@ -140,6 +142,79 @@ function Layout() {
         // };
     };
 
+    // 发送消息2.0 -- 调用sse接口（get方法），流式接收
+    // TODO：加入发送对话时的loading, 和页面的初始化loading分开
+    const handleSentSSE = async () => {
+        if (!llmReq.trim()) return;
+        const newChatRecords = [...chatRecords];
+        newChatRecords.push({
+            role: 'user',
+            content: llmReq,
+        })
+        // 更新页面添加用户对话
+        setChatRecords(newChatRecords);
+
+        // 发送sse
+        // 1. eventSource有缺陷, 使用其他库
+        // const event = new EventSource(`http://localhost:8080/llmSSE?content=${encodeURIComponent(llmReq)}&userId=${userId}&sessionId=${sessionId}`);
+        // event.onmessage = (e) => {
+        //     // 如果收到结束标志，必须手动关闭连接
+        //     if (e.data === '[DONE]') {
+        //         console.log('接收完毕，主动关闭流')
+        //         event.close();
+        //         return;
+        //     }
+
+        //     // 正常接收流式数据
+        //     const parsedData = JSON.parse(e.data);
+        //     console.log('接收到部分记录: ', parsedData);
+        //     // 收到的记录是一次回答
+        //     // 缺点：
+        //     // 1.每次都push导致多条，应该替换最后一条再push，
+        //     // 2. 在回答完成了setState这个快照才一次兑现
+        //     // vue不会有这个问题
+        //     // TODO: 在这里可以将 parsedData.data 更新到 state 里渲染界面
+        //     newChatRecords.push(parsedData);
+        //     setChatRecords(newChatRecords);
+        // };
+        // event.onerror = (err) => {
+        //     console.error('SSE 发生错误，自动关闭连接。', err);
+        //     event.close(); // 发生错误自动关闭，防止一直重试
+        // };
+
+        // 2. 使用新的库
+        await llmApi.sendToLlmSSE({
+            content: llmReq,
+            userId,
+            sessionId,
+        }, (ev) => {
+            console.log(ev.data);
+            const assistantObj = JSON.parse(ev.data);
+            const index = newChatRecords.findIndex(item => item.id === assistantObj.id);
+            // 在聊天列表中，没有同id就push，有就替换
+            if(index !== -1) {
+                newChatRecords[index] = assistantObj;
+            } else {
+                newChatRecords.push(assistantObj);
+            }
+            setChatRecords(newChatRecords);
+            // nextTick ???
+        })
+        // 清空输入框
+        setLlmReq('');
+
+        if (!sessionId) {
+            // 新对话发送，获取所有对话列表
+            sessionApi.getList(userId).then(res => {
+                if (res.data && res.data.length > 0) {
+                    setSessionList(res.data);
+                    // 路由设置为新对话, 此时sessionList还没被改变，获取到的仍然是旧的state
+                    navigate(`/session/${res.data[res.data.length - 1].sessionId}`)
+                }
+            })
+        }
+    }
+
     return (
         <div className={styles.wrap}>
             <div className={styles.sidebar}>
@@ -158,7 +233,7 @@ function Layout() {
                 </div>
                 <div className={styles.rightBottom}>
                     <Chat
-                        onSend={handleSend}
+                        onSend={handleSentSSE}
                         llmReq={llmReq}
                         setLlmReq={setLlmReq}
                         isLoading={isLoading}
