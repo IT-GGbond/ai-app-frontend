@@ -13,6 +13,7 @@ interface ChatRecord {
 interface OutletContext {
     chatRecords: ChatRecord[];
     isLoading: boolean;
+    isGenerating?: boolean;
     currentSessionId?: string;
 }
 
@@ -20,10 +21,13 @@ function ChatRecord() {
     const { sessionId } = useParams();
     const context = useOutletContext<OutletContext>();
 
-    const { chatRecords = [], isLoading = false } = context || {};
+    const { chatRecords = [], isLoading = false, isGenerating = false } = context || {};
 
     // id为空是新对话
     const isNewChat = !sessionId;
+
+    // 当正在生成，且最后一条消息是发出的user消息时（还没拿到第一帧流式数据），展示“思考中”占位
+    const showThinking = isGenerating && chatRecords.length > 0 && chatRecords[chatRecords.length - 1].role === 'user';
 
     if (isLoading) {
         return (
@@ -69,6 +73,14 @@ function ChatRecord() {
                                 </div>
                             </div>
                         ))}
+                        {showThinking && (
+                            <div className="message assistant">
+                                <div className="message-role">🤖 AI</div>
+                                <div className="message-content">
+                                    <p className="thinking-text">思考中...</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="empty-state">

@@ -18,7 +18,7 @@
 
 .record-details {
     flex: 1;
-    overflow-y: auto;
+    /* overflow-y: auto; 删掉这个防止嵌套的双重滚动条干扰高度计算 */
     padding: 15px;
 }
 
@@ -105,4 +105,16 @@
 
 .new-a:hover {
     text-decoration: underline;
+}
+
+.thinking-text {
+    animation: blink 1.5s infinite;
+    color: #666;
+    margin: 0;
+}
+
+@keyframes blink {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
 }

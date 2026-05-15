@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useParams } from 'react-router-dom';
 import { sessionApi } from '../api/sessionApi';
 import Chat from '../components/Chat';
@@ -27,6 +27,41 @@ function Layout() {
     const [chatRecords, setChatRecords] = useState<ChatRecord[]>([]);
     const [llmReq, setLlmReq] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    // isGenerating 用来标记：是否已发出请求但接口“还未返回第一帧内容”
+    const [isGenerating, setIsGenerating] = useState(false);
+    // isReceiving 用来标记：接口正在流式响应中，以便禁用发送按钮
+    const [isReceiving, setIsReceiving] = useState(false);
+    const chatDetailsRef = useRef<HTMLDivElement>(null);
+    const isAutoScrollRef = useRef(true);
+
+    // 监听用户的滚动事件，如果用户往上滚，就暂时关掉自动滚动
+    useEffect(() => {
+        const el = chatDetailsRef.current;
+        if (!el) return;
+        const handleScroll = () => {
+            // 因为有 margin/padding 以及流式渲染时的微小抖动，把距离底部的容差值稍微设大一点（比如 150px）
+            if (el.scrollHeight - el.scrollTop - el.clientHeight > 150) {
+                isAutoScrollRef.current = false;
+            } else {
+                isAutoScrollRef.current = true;
+            }
+        }
+        el.addEventListener('scroll', handleScroll);
+        return () => el.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // 回到底部的逻辑
+    useEffect(() => {
+        if (chatDetailsRef.current && isAutoScrollRef.current) {
+            // 加一个极小的异步延迟，确保 React 渲染完成并且浏览器画出所有高度计算再去修改 scrollTop
+            setTimeout(() => {
+                if (chatDetailsRef.current) {
+                    chatDetailsRef.current.scrollTop = chatDetailsRef.current.scrollHeight;
+                }
+            }, 10);
+        }
+    }, [chatRecords, isGenerating]);
+
 
     // 111初始化：获取会话列表, 传递给Sidebar组件
     useEffect(() => {
@@ -153,6 +188,12 @@ function Layout() {
         })
         // 更新页面添加用户对话
         setChatRecords(newChatRecords);
+        // 发送完立即准备滚动到底部
+        isAutoScrollRef.current = true;
+        setIsGenerating(true);
+        setIsReceiving(true);
+        // 清空输入框提前到这里，让体验更连贯
+        setLlmReq('');
 
         // 发送sse
         // 1. eventSource有缺陷, 使用其他库
@@ -181,59 +222,66 @@ function Layout() {
         //     console.error('SSE 发生错误，自动关闭连接。', err);
         //     event.close(); // 发生错误自动关闭，防止一直重试
         // };
+        try {
+            // 2. 使用新的库
+            await llmApi.sendToLlmSSE({
+                content: llmReq,
+                userId,
+                sessionId,
+            }, (ev) => {
+                // 收到第一帧数据后，关闭"思考中"占位
+                setIsGenerating(false);
 
-        // 2. 使用新的库
-        await llmApi.sendToLlmSSE({
-            content: llmReq,
-            userId,
-            sessionId,
-        }, (ev) => {
-            // console.log(ev.data);
-            const assistantObj = JSON.parse(ev.data);
+                // console.log(ev.data);
+                const assistantObj = JSON.parse(ev.data);
 
-            // 情况1：由于指向同一块内存问题，没有复制，用户对话更新，sse回答setState不更新dom，数据也没更新
-            // 内存中的数据不实时更新，dom也不实时更新
-            // const index = newChatRecords.findIndex(item => item.id === assistantObj.id);
-            // // 在聊天列表中，没有同id就push，有就替换
-            // if (index !== -1) {
-            //     newChatRecords[index] = assistantObj;
-            // } else {
-            //     newChatRecords.push(assistantObj);
-            // }
-            // console.log(chatRecords); // 为什么一直为空，没有用户列表，但是此时dom上已经显示了用户列表
-            // setChatRecords(newChatRecords); // 地址没变，底层认为数据没变
+                // 情况1：由于指向同一块内存问题，没有复制，用户对话更新，sse回答setState不更新dom，数据也没更新
+                // 内存中的数据不实时更新，dom也不实时更新
+                // const index = newChatRecords.findIndex(item => item.id === assistantObj.id);
+                // // 在聊天列表中，没有同id就push，有就替换
+                // if (index !== -1) {
+                //     newChatRecords[index] = assistantObj;
+                // } else {
+                //     newChatRecords.push(assistantObj);
+                // }
+                // console.log(chatRecords); // 为什么一直为空，没有用户列表，但是此时dom上已经显示了用户列表
+                // setChatRecords(newChatRecords); // 地址没变，底层认为数据没变
 
-            // 情况2：用户和sse回答都及时更新
-            // const newList = [...newChatRecords];
-            // const index = newList.findIndex(item => item.id === assistantObj.id);
-            // // 在聊天列表中，没有同id就push，有就替换
-            // if (index !== -1) {
-            //     newList[index] = assistantObj;
-            // } else {
-            //     newList.push(assistantObj);
-            // }
-            // // 如果加上下面这行，并且把外部的 const newChatRecords 改成 let，逻辑就正确了
-            // newChatRecords = newList; // 这里不需要 [...newList] 了，直接赋值引用即可
-            // setChatRecords(newList);
+                // 情况2：用户和sse回答都及时更新
+                // const newList = [...newChatRecords];
+                // const index = newList.findIndex(item => item.id === assistantObj.id);
+                // // 在聊天列表中，没有同id就push，有就替换
+                // if (index !== -1) {
+                //     newList[index] = assistantObj;
+                // } else {
+                //     newList.push(assistantObj);
+                // }
+                // // 如果加上下面这行，并且把外部的 const newChatRecords 改成 let，逻辑就正确了
+                // newChatRecords = newList; // 这里不需要 [...newList] 了，直接赋值引用即可
+                // setChatRecords(newList);
 
-            // 情况3（同2）：使用函数式更新，prev获取最新状态，并每次返回全新的数组引用触发重新渲染
-            // 使用「函数式更新」( setState(prev => ...) ) 的场景
-            // 核心特征：你的新状态绝对依赖于旧状态，且中间可能会发生异步 / 多次调用的情况。
-            setChatRecords(prev => {
-                const nextRecords = [...prev];
-                const index = nextRecords.findIndex(item => item.id === assistantObj.id);
-                // 在聊天列表中，没有同id就push，有就替换
-                if(index !== -1) {
-                    nextRecords[index] = assistantObj;
-                } else {
-                    nextRecords.push(assistantObj);
-                }
-                return nextRecords;
+                // 情况3（同2）：使用函数式更新，prev获取最新状态，并每次返回全新的数组引用触发重新渲染
+                // 使用「函数式更新」( setState(prev => ...) ) 的场景
+                // 核心特征：你的新状态绝对依赖于旧状态，且中间可能会发生异步 / 多次调用的情况。
+                setChatRecords(prev => {
+                    const nextRecords = [...prev];
+                    const index = nextRecords.findIndex(item => item.id === assistantObj.id);
+                    // 在聊天列表中，没有同id就push，有就替换
+                    if (index !== -1) {
+                        nextRecords[index] = assistantObj;
+                    } else {
+                        nextRecords.push(assistantObj);
+                    }
+                    return nextRecords;
+                });
             });
+        } catch (err) {
+            console.error('SSE 请求异常:', err);
+        } finally {
+            setIsGenerating(false);
+            setIsReceiving(false);
+        }
 
-        })
-        // 清空输入框
-        setLlmReq(''); // 如果没有这行不会实时更新dom
         // console.log(chatRecords); // 还是空，第二次调用函数的时候不为空了，加上了用户的和sse回答的
 
         if (!sessionId) {
@@ -257,11 +305,12 @@ function Layout() {
                 />
             </div>
             <div className={styles.rightbar}>
-                <div className={styles.chatDetails}>
+                <div className={styles.chatDetails} ref={chatDetailsRef}>
                     {/* 使用路由的组件，用 Outlet占位符，相当于vue中的router-view */}
                     <Outlet context={{
                         chatRecords,
                         isLoading,
+                        isGenerating
                     }} />
                 </div>
                 <div className={styles.rightBottom}>
@@ -269,7 +318,7 @@ function Layout() {
                         onSend={handleSentSSE}
                         llmReq={llmReq}
                         setLlmReq={setLlmReq}
-                        isLoading={isLoading}
+                        isLoading={isReceiving || isLoading}
                     />
                 </div>
             </div>
