@@ -188,20 +188,53 @@ function Layout() {
             userId,
             sessionId,
         }, (ev) => {
-            console.log(ev.data);
+            // console.log(ev.data);
             const assistantObj = JSON.parse(ev.data);
-            const index = newChatRecords.findIndex(item => item.id === assistantObj.id);
-            // 在聊天列表中，没有同id就push，有就替换
-            if(index !== -1) {
-                newChatRecords[index] = assistantObj;
-            } else {
-                newChatRecords.push(assistantObj);
-            }
-            setChatRecords(newChatRecords);
-            // nextTick ???
+
+            // 情况1：由于指向同一块内存问题，没有复制，用户对话更新，sse回答setState不更新dom，数据也没更新
+            // 内存中的数据不实时更新，dom也不实时更新
+            // const index = newChatRecords.findIndex(item => item.id === assistantObj.id);
+            // // 在聊天列表中，没有同id就push，有就替换
+            // if (index !== -1) {
+            //     newChatRecords[index] = assistantObj;
+            // } else {
+            //     newChatRecords.push(assistantObj);
+            // }
+            // console.log(chatRecords); // 为什么一直为空，没有用户列表，但是此时dom上已经显示了用户列表
+            // setChatRecords(newChatRecords); // 地址没变，底层认为数据没变
+
+            // 情况2：用户和sse回答都及时更新
+            // const newList = [...newChatRecords];
+            // const index = newList.findIndex(item => item.id === assistantObj.id);
+            // // 在聊天列表中，没有同id就push，有就替换
+            // if (index !== -1) {
+            //     newList[index] = assistantObj;
+            // } else {
+            //     newList.push(assistantObj);
+            // }
+            // // 如果加上下面这行，并且把外部的 const newChatRecords 改成 let，逻辑就正确了
+            // newChatRecords = newList; // 这里不需要 [...newList] 了，直接赋值引用即可
+            // setChatRecords(newList);
+
+            // 情况3（同2）：使用函数式更新，prev获取最新状态，并每次返回全新的数组引用触发重新渲染
+            // 使用「函数式更新」( setState(prev => ...) ) 的场景
+            // 核心特征：你的新状态绝对依赖于旧状态，且中间可能会发生异步 / 多次调用的情况。
+            setChatRecords(prev => {
+                const nextRecords = [...prev];
+                const index = nextRecords.findIndex(item => item.id === assistantObj.id);
+                // 在聊天列表中，没有同id就push，有就替换
+                if(index !== -1) {
+                    nextRecords[index] = assistantObj;
+                } else {
+                    nextRecords.push(assistantObj);
+                }
+                return nextRecords;
+            });
+
         })
         // 清空输入框
-        setLlmReq('');
+        setLlmReq(''); // 如果没有这行不会实时更新dom
+        // console.log(chatRecords); // 还是空，第二次调用函数的时候不为空了，加上了用户的和sse回答的
 
         if (!sessionId) {
             // 新对话发送，获取所有对话列表

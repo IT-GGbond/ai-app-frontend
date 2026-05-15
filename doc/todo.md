@@ -25,7 +25,7 @@
 
 # 问题逐步改进
 ## sse请求
-原生 EventSource API缺点：仅支持get请求，url长度受限，无法自定义请求头
+1. 原生 EventSource API缺点：仅支持get请求，url长度受限，无法自定义请求头
 解决：使用npm包@microsoft/fetch-event-source
 | 特性 | 原生 EventSource | @microsoft/fetch-event-source |
 | :--- | :--- | :--- |
@@ -34,3 +34,6 @@
 | 请求体 | 不支持 | 支持（如 JSON, FormData） |
 | 错误重试 | 浏览器内置，不可控 | 完全由开发者控制，可自定义策略 |
 | 连接控制 | 基础 | 支持 `AbortController` 主动中断 |
+
+2. react的闭包陷阱，state快照
+3. 流式传输滚动条问题
