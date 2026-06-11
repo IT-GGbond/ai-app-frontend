@@ -33,8 +33,9 @@ export const llmApi = {
         if (ev.data === "[DONE]") {
           // 利用fetch原生正常终止
           ctrl.abort();
+        } else {
+          callback(ev);
         }
-        callback(ev);
       },
     });
   },
